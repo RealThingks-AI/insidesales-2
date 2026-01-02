@@ -1,102 +1,300 @@
-import { DollarSign, Users, TrendingUp, Target, Plus, Filter } from "lucide-react";
-import Sidebar from "@/components/layout/Sidebar";
-import MetricCard from "@/components/dashboard/MetricCard";
-import LeadCard from "@/components/dashboard/LeadCard";
-import ActivityItem from "@/components/dashboard/ActivityItem";
-import PipelineChart from "@/components/dashboard/PipelineChart";
+import { useState, useEffect } from "react";
+import { useNavigate } from "react-router-dom";
+import { supabase } from "@/integrations/supabase/client";
+import { useAuth } from "@/hooks/useAuth";
+import { Deal, DealStage } from "@/types/deal";
+import { DealForm } from "@/components/DealForm";
+import { DashboardStats } from "@/components/dashboard/DashboardStats";
+import { DashboardContent } from "@/components/dashboard/DashboardContent";
+import { useToast } from "@/hooks/use-toast";
 import { Button } from "@/components/ui/button";
-
-const metrics = [
-  { title: "Total Revenue", value: "$284,520", change: "+12.5%", changeType: "positive" as const, icon: DollarSign },
-  { title: "Active Leads", value: "1,429", change: "+8.2%", changeType: "positive" as const, icon: Users },
-  { title: "Conversion Rate", value: "24.8%", change: "+3.1%", changeType: "positive" as const, icon: TrendingUp },
-  { title: "Deals Won", value: "89", change: "-2.4%", changeType: "negative" as const, icon: Target },
-];
-
-const leads = [
-  { name: "Sarah Mitchell", company: "TechCorp Inc", email: "sarah@techcorp.com", value: "$45,000", status: "qualified" as const },
-  { name: "Michael Chen", company: "DataFlow Systems", email: "m.chen@dataflow.io", value: "$32,500", status: "proposal" as const },
-  { name: "Emma Rodriguez", company: "CloudNine Solutions", email: "emma@cloudnine.co", value: "$28,000", status: "new" as const },
-  { name: "James Wilson", company: "Innovate Labs", email: "jwilson@innovate.com", value: "$67,000", status: "contacted" as const },
-];
-
-const activities = [
-  { type: "deal" as const, title: "Deal closed with TechVentures", description: "Enterprise plan - $125,000 annual contract", time: "2h ago" },
-  { type: "call" as const, title: "Call scheduled with DataFlow", description: "Product demo for new features", time: "4h ago" },
-  { type: "email" as const, title: "Proposal sent to CloudNine", description: "Custom enterprise solution", time: "6h ago" },
-  { type: "meeting" as const, title: "Meeting with Innovate Labs", description: "Contract negotiation final round", time: "Yesterday" },
-];
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
+import { LayoutGrid, List, Plus, LogOut } from "lucide-react";
 
 const Index = () => {
+  const { user, loading: authLoading, signOut } = useAuth();
+  const navigate = useNavigate();
+  const { toast } = useToast();
+  
+  const [deals, setDeals] = useState<Deal[]>([]);
+  const [loading, setLoading] = useState(true);
+  const [selectedDeal, setSelectedDeal] = useState<Deal | null>(null);
+  const [isFormOpen, setIsFormOpen] = useState(false);
+  const [isCreating, setIsCreating] = useState(false);
+  const [initialStage, setInitialStage] = useState<DealStage>('Lead');
+  const [activeView, setActiveView] = useState<'kanban' | 'list'>('kanban');
+
+  useEffect(() => {
+    if (!authLoading && !user) {
+      navigate("/auth");
+    }
+  }, [user, authLoading, navigate]);
+
+  useEffect(() => {
+    if (user) {
+      fetchDeals();
+    }
+  }, [user]);
+
+  const fetchDeals = async () => {
+    try {
+      setLoading(true);
+      const { data, error } = await supabase
+        .from('deals')
+        .select('*')
+        .order('modified_at', { ascending: false });
+
+      if (error) {
+        toast({
+          title: "Error",
+          description: "Failed to fetch deals",
+          variant: "destructive",
+        });
+        return;
+      }
+
+      setDeals((data || []) as unknown as Deal[]);
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "An unexpected error occurred",
+        variant: "destructive",
+      });
+    } finally {
+      setLoading(false);
+    }
+  };
+
+  const handleUpdateDeal = async (dealId: string, updates: Partial<Deal>) => {
+    try {
+      const { error } = await supabase
+        .from('deals')
+        .update({ ...updates, modified_at: new Date().toISOString() })
+        .eq('id', dealId);
+
+      if (error) throw error;
+
+      setDeals(prev => prev.map(deal => 
+        deal.id === dealId ? { ...deal, ...updates } : deal
+      ));
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to update deal",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleSaveDeal = async (dealData: Partial<Deal>) => {
+    try {
+      if (isCreating) {
+        const { data, error } = await supabase
+          .from('deals')
+          .insert([{ 
+            ...dealData, 
+            deal_name: dealData.project_name || 'Untitled Deal',
+            created_by: user?.id,
+            modified_by: user?.id 
+          }])
+          .select()
+          .single();
+
+        if (error) throw error;
+
+        setDeals(prev => [data as unknown as Deal, ...prev]);
+      } else if (selectedDeal) {
+        const updateData = {
+          ...dealData,
+          deal_name: dealData.project_name || selectedDeal.project_name || 'Untitled Deal',
+          modified_at: new Date().toISOString(),
+          modified_by: user?.id
+        };
+        
+        console.log("Updating deal with data:", updateData);
+        
+        await handleUpdateDeal(selectedDeal.id, updateData);
+        
+        await fetchDeals();
+      }
+    } catch (error) {
+      console.error("Error in handleSaveDeal:", error);
+      throw error;
+    }
+  };
+
+  const handleDeleteDeals = async (dealIds: string[]) => {
+    try {
+      const { error } = await supabase
+        .from('deals')
+        .delete()
+        .in('id', dealIds);
+
+      if (error) throw error;
+
+      setDeals(prev => prev.filter(deal => !dealIds.includes(deal.id)));
+      
+      toast({
+        title: "Success",
+        description: `Deleted ${dealIds.length} deal(s)`,
+      });
+    } catch (error) {
+      toast({
+        title: "Error",
+        description: "Failed to delete deals",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleImportDeals = async (importedDeals: (Partial<Deal> & { shouldUpdate?: boolean })[]) => {
+    try {
+      let createdCount = 0;
+      let updatedCount = 0;
+
+      for (const importDeal of importedDeals) {
+        const { shouldUpdate, ...dealData } = importDeal;
+        
+        const existingDeal = deals.find(d => 
+          (dealData.id && d.id === dealData.id) || 
+          (dealData.project_name && d.project_name === dealData.project_name)
+        );
+
+        if (existingDeal) {
+          const { data, error } = await supabase
+            .from('deals')
+            .update({
+              ...dealData,
+              modified_by: user?.id,
+              deal_name: dealData.project_name || existingDeal.deal_name
+            })
+            .eq('id', existingDeal.id)
+            .select()
+            .single();
+
+          if (error) throw error;
+          updatedCount++;
+        } else {
+          const newDealData = {
+            ...dealData,
+            stage: dealData.stage || 'Lead' as const,
+            created_by: user?.id,
+            modified_by: user?.id,
+            deal_name: dealData.project_name || `Imported Deal ${Date.now()}`
+          };
+
+          const { data, error } = await supabase
+            .from('deals')
+            .insert(newDealData)
+            .select()
+            .single();
+
+          if (error) throw error;
+          createdCount++;
+        }
+      }
+
+      await fetchDeals();
+      
+      toast({
+        title: "Import successful",
+        description: `Created ${createdCount} new deals, updated ${updatedCount} existing deals`,
+      });
+    } catch (error) {
+      console.error('Import error:', error);
+      toast({
+        title: "Error",
+        description: "Failed to import deals. Please check the CSV format.",
+        variant: "destructive",
+      });
+    }
+  };
+
+  const handleCreateDeal = (stage: DealStage) => {
+    setInitialStage(stage);
+    setIsCreating(true);
+    setSelectedDeal(null);
+    setIsFormOpen(true);
+  };
+
+  const handleDealClick = (deal: Deal) => {
+    setSelectedDeal(deal);
+    setIsCreating(false);
+    setIsFormOpen(true);
+  };
+
+  const handleCloseForm = () => {
+    setIsFormOpen(false);
+    setSelectedDeal(null);
+    setIsCreating(false);
+  };
+
+  const handleSignOut = async () => {
+    await signOut();
+    navigate("/auth");
+  };
+
+  if (authLoading || loading) {
+    return (
+      <div className="min-h-screen flex items-center justify-center bg-background">
+        <div className="text-center">
+          <div className="animate-spin rounded-full h-8 w-8 border-b-2 border-primary mx-auto mb-4"></div>
+          <p className="text-muted-foreground">Loading...</p>
+        </div>
+      </div>
+    );
+  }
+
+  if (!user) {
+    return null;
+  }
+
   return (
     <div className="min-h-screen bg-background">
-      <Sidebar />
-      
-      <main className="ml-64 p-8">
-        {/* Header */}
-        <div className="flex items-center justify-between mb-8 animate-fade-in">
-          <div>
-            <h1 className="text-3xl font-bold text-foreground">Dashboard</h1>
-            <p className="text-muted-foreground mt-1">Welcome back, John. Here's your sales overview.</p>
+      {/* Inline header to replace DashboardHeader */}
+      <header className="border-b bg-card sticky top-0 z-50">
+        <div className="container mx-auto px-4 h-14 flex items-center justify-between">
+          <div className="flex items-center gap-4">
+            <h1 className="text-lg font-semibold">Deals Pipeline</h1>
+            <ToggleGroup type="single" value={activeView} onValueChange={(v) => v && setActiveView(v as 'kanban' | 'list')}>
+              <ToggleGroupItem value="kanban" aria-label="Kanban View" className="h-8 px-3">
+                <LayoutGrid className="w-4 h-4" />
+              </ToggleGroupItem>
+              <ToggleGroupItem value="list" aria-label="List View" className="h-8 px-3">
+                <List className="w-4 h-4" />
+              </ToggleGroupItem>
+            </ToggleGroup>
           </div>
-          <div className="flex items-center gap-3">
-            <Button variant="outline" size="sm" className="gap-2">
-              <Filter className="w-4 h-4" />
-              Filter
+          <div className="flex items-center gap-2">
+            <Button onClick={() => handleCreateDeal('Lead')} size="sm" className="gap-2">
+              <Plus className="w-4 h-4" /> New Deal
             </Button>
-            <Button size="sm" className="gap-2 bg-primary text-primary-foreground hover:bg-primary/90">
-              <Plus className="w-4 h-4" />
-              Add Lead
-            </Button>
           </div>
         </div>
+      </header>
 
-        {/* Metrics Grid */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6 mb-8">
-          {metrics.map((metric, index) => (
-            <div key={metric.title} className={`animate-slide-up stagger-${index + 1}`} style={{ opacity: 0 }}>
-              <MetricCard {...metric} />
-            </div>
-          ))}
-        </div>
+      <DashboardStats deals={deals} />
 
-        {/* Main Content Grid */}
-        <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-          {/* Pipeline Chart */}
-          <div className="lg:col-span-2 animate-slide-up stagger-2" style={{ opacity: 0 }}>
-            <PipelineChart />
-          </div>
+      <DashboardContent
+        activeView={activeView}
+        deals={deals}
+        onUpdateDeal={handleUpdateDeal}
+        onDealClick={handleDealClick}
+        onCreateDeal={handleCreateDeal}
+        onDeleteDeals={handleDeleteDeals}
+        onImportDeals={handleImportDeals}
+        onRefresh={fetchDeals}
+      />
 
-          {/* Recent Activity */}
-          <div className="glass-card rounded-xl p-6 animate-slide-up stagger-3" style={{ opacity: 0 }}>
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-lg font-semibold text-foreground">Recent Activity</h3>
-              <button className="text-sm text-primary hover:underline">View all</button>
-            </div>
-            <div className="space-y-1">
-              {activities.map((activity, index) => (
-                <ActivityItem key={index} {...activity} />
-              ))}
-            </div>
-          </div>
-
-          {/* Hot Leads */}
-          <div className="lg:col-span-3 animate-slide-up stagger-4" style={{ opacity: 0 }}>
-            <div className="flex items-center justify-between mb-6">
-              <div>
-                <h3 className="text-lg font-semibold text-foreground">Hot Leads</h3>
-                <p className="text-sm text-muted-foreground">Your most promising opportunities</p>
-              </div>
-              <button className="text-sm text-primary hover:underline">View all leads</button>
-            </div>
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-6">
-              {leads.map((lead, index) => (
-                <LeadCard key={lead.email} {...lead} />
-              ))}
-            </div>
-          </div>
-        </div>
-      </main>
+      <DealForm
+        deal={selectedDeal}
+        isOpen={isFormOpen}
+        onClose={handleCloseForm}
+        onSave={handleSaveDeal}
+        onRefresh={fetchDeals}
+        isCreating={isCreating}
+        initialStage={initialStage}
+      />
     </div>
   );
 };

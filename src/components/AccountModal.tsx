@@ -30,7 +30,7 @@ const accountSchema = z.object({
   notes: z.string().max(2000, "Notes must be less than 2000 characters").optional(),
   industry: z.string().optional(),
   phone: z.string().max(20, "Phone number must be less than 20 characters").optional(),
-  segment: z.string().optional(),
+  
 });
 
 type AccountFormData = z.infer<typeof accountSchema>;
@@ -70,7 +70,7 @@ const industries = [
 
 const companyTypes = ["OEM", "Tier-1", "Tier-2", "Startup", "Enterprise", "SMB", "Government", "Non-Profit", "Other"];
 
-const segments = ["prospect", "customer", "partner", "vendor", "competitor"];
+
 
 export const AccountModal = ({ open, onOpenChange, account, onSuccess }: AccountModalProps) => {
   const { toast } = useToast();
@@ -92,7 +92,6 @@ export const AccountModal = ({ open, onOpenChange, account, onSuccess }: Account
       notes: "",
       industry: "",
       phone: "",
-      segment: "prospect",
     },
   });
 
@@ -119,7 +118,7 @@ export const AccountModal = ({ open, onOpenChange, account, onSuccess }: Account
         notes: account.notes || "",
         industry: account.industry || "",
         phone: account.phone || "",
-        segment: account.segment || "prospect",
+        
       });
       setSelectedTags(account.tags || []);
       if (account.region && regionCountries[account.region]) {
@@ -137,7 +136,7 @@ export const AccountModal = ({ open, onOpenChange, account, onSuccess }: Account
         notes: "",
         industry: "",
         phone: "",
-        segment: "prospect",
+        
       });
       setSelectedTags([]);
     }
@@ -175,7 +174,7 @@ export const AccountModal = ({ open, onOpenChange, account, onSuccess }: Account
         notes: data.notes || null,
         industry: data.industry || null,
         phone: data.phone || null,
-        segment: data.segment || 'prospect',
+        
         account_owner: user.data.user.id,
         modified_by: user.data.user.id,
       };
@@ -398,30 +397,6 @@ export const AccountModal = ({ open, onOpenChange, account, onSuccess }: Account
                 )}
               />
 
-              <FormField
-                control={form.control}
-                name="segment"
-                render={({ field }) => (
-                  <FormItem>
-                    <FormLabel>Segment</FormLabel>
-                    <Select onValueChange={field.onChange} value={field.value}>
-                      <FormControl>
-                        <SelectTrigger>
-                          <SelectValue placeholder="Select segment" />
-                        </SelectTrigger>
-                      </FormControl>
-                      <SelectContent>
-                        {segments.map((seg) => (
-                          <SelectItem key={seg} value={seg}>
-                            {seg.charAt(0).toUpperCase() + seg.slice(1)}
-                          </SelectItem>
-                        ))}
-                      </SelectContent>
-                    </Select>
-                    <FormMessage />
-                  </FormItem>
-                )}
-              />
 
               <FormField
                 control={form.control}

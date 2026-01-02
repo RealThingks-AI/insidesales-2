@@ -31,7 +31,6 @@ import { format } from "date-fns";
 import { AccountActivityTimeline } from "./AccountActivityTimeline";
 import { AccountAssociations } from "./AccountAssociations";
 import { ActivityLogModal } from "./ActivityLogModal";
-import { AccountScoreBadge, AccountSegmentBadge } from "./AccountScoreBadge";
 import { getAccountStatusColor } from "@/utils/accountStatusUtils";
 
 interface Account {
@@ -46,8 +45,6 @@ interface Account {
   status?: string | null;
   notes?: string | null;
   company_type?: string | null;
-  score?: number | null;
-  segment?: string | null;
   created_at?: string | null;
   updated_at?: string | null;
 }
@@ -88,8 +85,6 @@ export const AccountDetailModal = ({ open, onOpenChange, account, onUpdate, onEd
                   <Badge className={getAccountStatusColor(account.status)}>
                     {account.status || 'New'}
                   </Badge>
-                  <AccountSegmentBadge segment={account.segment || 'prospect'} />
-                  <AccountScoreBadge score={account.score || 0} />
                 </div>
               </div>
               <div className="flex items-center gap-2">
@@ -138,72 +133,52 @@ export const AccountDetailModal = ({ open, onOpenChange, account, onUpdate, onEd
 
             <TabsContent value="overview" className="space-y-4 mt-4">
               {/* Account Info */}
-              <div className="grid grid-cols-2 gap-4">
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base">Company Details</CardTitle>
-                  </CardHeader>
-                  <CardContent className="space-y-3">
-                    {account.website && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <Globe className="h-4 w-4 text-muted-foreground" />
-                        <a 
-                          href={account.website.startsWith('http') ? account.website : `https://${account.website}`} 
-                          target="_blank" 
-                          rel="noopener noreferrer"
-                          className="text-primary hover:underline"
-                        >
-                          {account.website}
-                        </a>
-                      </div>
-                    )}
-                    {account.phone && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <Phone className="h-4 w-4 text-muted-foreground" />
-                        <a href={`tel:${account.phone}`} className="hover:underline">
-                          {account.phone}
-                        </a>
-                      </div>
-                    )}
-                    {account.industry && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <Factory className="h-4 w-4 text-muted-foreground" />
-                        <span>{account.industry}</span>
-                      </div>
-                    )}
-                    {(account.region || account.country) && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <MapPin className="h-4 w-4 text-muted-foreground" />
-                        <span>{[account.region, account.country].filter(Boolean).join(', ')}</span>
-                      </div>
-                    )}
-                    {account.company_type && (
-                      <div className="flex items-center gap-2 text-sm">
-                        <Building2 className="h-4 w-4 text-muted-foreground" />
-                        <span>{account.company_type}</span>
-                      </div>
-                    )}
-                  </CardContent>
-                </Card>
-
-                <Card>
-                  <CardHeader className="pb-3">
-                    <CardTitle className="text-base">Account Score</CardTitle>
-                  </CardHeader>
-                  <CardContent>
-                    <AccountScoreBadge score={account.score || 0} showProgress />
-                    <div className="mt-4 text-sm text-muted-foreground">
-                      <p>Score is calculated based on:</p>
-                      <ul className="list-disc list-inside mt-1 space-y-0.5">
-                        <li>Number of contacts</li>
-                        <li>Activity frequency</li>
-                        <li>Recent engagement</li>
-                        <li>Profile completeness</li>
-                      </ul>
+              <Card>
+                <CardHeader className="pb-3">
+                  <CardTitle className="text-base">Company Details</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-3">
+                  {account.website && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Globe className="h-4 w-4 text-muted-foreground" />
+                      <a 
+                        href={account.website.startsWith('http') ? account.website : `https://${account.website}`} 
+                        target="_blank" 
+                        rel="noopener noreferrer"
+                        className="text-primary hover:underline"
+                      >
+                        {account.website}
+                      </a>
                     </div>
-                  </CardContent>
-                </Card>
-              </div>
+                  )}
+                  {account.phone && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Phone className="h-4 w-4 text-muted-foreground" />
+                      <a href={`tel:${account.phone}`} className="hover:underline">
+                        {account.phone}
+                      </a>
+                    </div>
+                  )}
+                  {account.industry && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Factory className="h-4 w-4 text-muted-foreground" />
+                      <span>{account.industry}</span>
+                    </div>
+                  )}
+                  {(account.region || account.country) && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <MapPin className="h-4 w-4 text-muted-foreground" />
+                      <span>{[account.region, account.country].filter(Boolean).join(', ')}</span>
+                    </div>
+                  )}
+                  {account.company_type && (
+                    <div className="flex items-center gap-2 text-sm">
+                      <Building2 className="h-4 w-4 text-muted-foreground" />
+                      <span>{account.company_type}</span>
+                    </div>
+                  )}
+                </CardContent>
+              </Card>
 
               {/* Notes */}
               {account.notes && (

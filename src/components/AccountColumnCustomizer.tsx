@@ -21,7 +21,6 @@ interface AccountColumnCustomizerProps {
   isSaving?: boolean;
 }
 
-// Updated default columns with new score, segment, revenue, counts columns
 export const defaultAccountColumns: AccountColumnConfig[] = [
   { field: 'company_name', label: 'Company Name', visible: true, order: 0 },
   { field: 'email', label: 'Email', visible: true, order: 1 },
@@ -34,11 +33,8 @@ export const defaultAccountColumns: AccountColumnConfig[] = [
   { field: 'region', label: 'Region', visible: false, order: 8 },
   { field: 'phone', label: 'Phone', visible: false, order: 9 },
   { field: 'account_owner', label: 'Account Owner', visible: true, order: 10 },
-  { field: 'score', label: 'Score', visible: false, order: 11 },
-  { field: 'segment', label: 'Segment', visible: false, order: 12 },
-  { field: 'total_revenue', label: 'Total Revenue', visible: false, order: 13 },
-  { field: 'deal_count', label: 'Deals', visible: false, order: 14 },
-  { field: 'contact_count', label: 'Contacts', visible: false, order: 15 },
+  { field: 'deal_count', label: 'Deals', visible: false, order: 11 },
+  { field: 'contact_count', label: 'Contacts', visible: false, order: 12 },
 ];
 
 export const AccountColumnCustomizer = ({
@@ -56,8 +52,13 @@ export const AccountColumnCustomizer = ({
     const existingFields = new Set(columns.map(c => c.field));
     const missingColumns = defaultAccountColumns.filter(dc => !existingFields.has(dc.field));
     
-    if (missingColumns.length > 0) {
-      setLocalColumns([...columns, ...missingColumns]);
+    // Filter out removed columns (score, segment, total_revenue)
+    const validColumns = columns.filter(c => 
+      defaultAccountColumns.some(dc => dc.field === c.field)
+    );
+    
+    if (missingColumns.length > 0 || validColumns.length !== columns.length) {
+      setLocalColumns([...validColumns, ...missingColumns]);
     } else {
       setLocalColumns(columns);
     }

@@ -48,9 +48,6 @@ export interface Account {
   updated_at?: string;
   created_by?: string;
   modified_by?: string;
-  score?: number;
-  segment?: string;
-  total_revenue?: number;
   deal_count?: number;
   contact_count?: number;
 }
@@ -196,7 +193,7 @@ const AccountTable = forwardRef<AccountTableRef, AccountTableProps>(({
   }, []);
   useEffect(() => {
     const searchLower = searchTerm.toLowerCase();
-    let filtered = accounts.filter(account => account.company_name?.toLowerCase().includes(searchLower) || account.industry?.toLowerCase().includes(searchLower) || account.country?.toLowerCase().includes(searchLower) || account.email?.toLowerCase().includes(searchLower) || account.phone?.toLowerCase().includes(searchLower) || account.website?.toLowerCase().includes(searchLower) || account.notes?.toLowerCase().includes(searchLower) || account.company_type?.toLowerCase().includes(searchLower) || account.region?.toLowerCase().includes(searchLower) || account.segment?.toLowerCase().includes(searchLower) || account.tags?.some(tag => tag.toLowerCase().includes(searchLower)));
+    let filtered = accounts.filter(account => account.company_name?.toLowerCase().includes(searchLower) || account.industry?.toLowerCase().includes(searchLower) || account.country?.toLowerCase().includes(searchLower) || account.email?.toLowerCase().includes(searchLower) || account.phone?.toLowerCase().includes(searchLower) || account.website?.toLowerCase().includes(searchLower) || account.notes?.toLowerCase().includes(searchLower) || account.company_type?.toLowerCase().includes(searchLower) || account.region?.toLowerCase().includes(searchLower) || account.tags?.some(tag => tag.toLowerCase().includes(searchLower)));
     if (statusFilter !== "all") {
       filtered = filtered.filter(account => account.status === statusFilter);
     }
@@ -265,15 +262,11 @@ const AccountTable = forwardRef<AccountTableRef, AccountTableProps>(({
         .from('deals')
         .select('customer_name, total_contract_value');
 
-      // Calculate deal counts and total revenue per company
-      const dealStatsMap: Record<string, { count: number; revenue: number }> = {};
+      // Calculate deal counts per company
+      const dealCountMap: Record<string, number> = {};
       (dealsData || []).forEach(deal => {
         if (deal.customer_name) {
-          if (!dealStatsMap[deal.customer_name]) {
-            dealStatsMap[deal.customer_name] = { count: 0, revenue: 0 };
-          }
-          dealStatsMap[deal.customer_name].count += 1;
-          dealStatsMap[deal.customer_name].revenue += deal.total_contract_value || 0;
+          dealCountMap[deal.customer_name] = (dealCountMap[deal.customer_name] || 0) + 1;
         }
       });
 
@@ -281,8 +274,7 @@ const AccountTable = forwardRef<AccountTableRef, AccountTableProps>(({
       const accountsWithCounts = (accountsData || []).map(account => ({
         ...account,
         contact_count: contactCountMap[account.id] || 0,
-        deal_count: dealStatsMap[account.company_name]?.count || 0,
-        total_revenue: dealStatsMap[account.company_name]?.revenue || account.total_revenue || 0,
+        deal_count: dealCountMap[account.company_name] || 0,
       }));
 
       setAccounts(accountsWithCounts);
@@ -575,20 +567,6 @@ const AccountTable = forwardRef<AccountTableRef, AccountTableProps>(({
                             ) : (
                               <span className="text-center text-muted-foreground w-full block">-</span>
                             )
-                          ) : column.field === 'score' ? (
-                            account.score != null ? (
-                              <span className={`font-medium text-center block w-full ${account.score >= 70 ? 'text-green-600 dark:text-green-400' : account.score >= 40 ? 'text-amber-600 dark:text-amber-400' : 'text-muted-foreground'}`}>{account.score}</span>
-                            ) : (
-                              <span className="text-center text-muted-foreground w-full block">-</span>
-                            )
-                          ) : column.field === 'segment' ? (
-                            account.segment ? (
-                              <Badge variant="outline" className="text-xs">{account.segment}</Badge>
-                            ) : (
-                              <span className="text-center text-muted-foreground w-full block">-</span>
-                            )
-                          ) : column.field === 'total_revenue' ? (
-                            <span className="font-medium">{formatCurrency(account.total_revenue)}</span>
                           ) : column.field === 'deal_count' ? (
                             <span className="text-center w-full block">{account.deal_count ?? 0}</span>
                           ) : column.field === 'contact_count' ? (

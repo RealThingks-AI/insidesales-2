@@ -7,11 +7,10 @@ import { KanbanBoard } from "@/components/KanbanBoard";
 import { ListView } from "@/components/ListView";
 import { DealForm } from "@/components/DealForm";
 import { Button } from "@/components/ui/button";
+import { ToggleGroup, ToggleGroupItem } from "@/components/ui/toggle-group";
 import { useToast } from "@/hooks/use-toast";
 import { Plus, LayoutGrid, List } from "lucide-react";
-import { Tooltip, TooltipContent, TooltipProvider, TooltipTrigger } from "@/components/ui/tooltip";
 import { useCRUDAudit } from "@/hooks/useCRUDAudit";
-import { DealActionsDropdown } from "@/components/DealActionsDropdown";
 
 const DealsPage = () => {
   const { user, loading: authLoading } = useAuth();
@@ -374,46 +373,25 @@ const DealsPage = () => {
       <div className="flex-shrink-0 h-16 border-b bg-background px-6 flex items-center">
         <div className="flex items-center justify-between w-full">
           <h1 className="text-2xl font-semibold text-foreground">Deals</h1>
-          <div className="flex items-center gap-2">
-            <div className="bg-muted rounded-lg p-1 flex gap-1">
-              <Button
-                variant={activeView === 'kanban' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setActiveView('kanban')}
-                className="gap-1.5"
-              >
-                <LayoutGrid className="w-4 h-4" />
-                Kanban
-              </Button>
-              <Button
-                variant={activeView === 'list' ? 'default' : 'ghost'}
-                size="sm"
-                onClick={() => setActiveView('list')}
-                className="gap-1.5"
-              >
-                <List className="w-4 h-4" />
-                List
-              </Button>
-            </div>
-
-            <DealActionsDropdown
-              deals={deals}
-              onImport={handleImportDeals}
-              onRefresh={fetchDeals}
-              selectedDeals={[]}
-              showColumns={activeView === 'list'}
-              onColumnCustomize={() => {
-                window.dispatchEvent(new CustomEvent('open-deal-columns'));
-              }}
-            />
-
-            <Button 
-              variant="outline"
-              size="sm"
-              onClick={() => handleCreateDeal('Lead')}
-              className="gap-1.5"
+          <div className="flex items-center gap-3">
+            {/* View Toggle - using ToggleGroup like Action Items */}
+            <ToggleGroup 
+              type="single" 
+              value={activeView} 
+              onValueChange={(value) => value && setActiveView(value as 'kanban' | 'list')}
             >
-              <Plus className="w-4 h-4" />
+              <ToggleGroupItem value="kanban" aria-label="Kanban view" className="px-3">
+                <LayoutGrid className="h-4 w-4 mr-1" />
+                Kanban
+              </ToggleGroupItem>
+              <ToggleGroupItem value="list" aria-label="List view" className="px-3">
+                <List className="h-4 w-4 mr-1" />
+                List
+              </ToggleGroupItem>
+            </ToggleGroup>
+
+            <Button onClick={() => handleCreateDeal('Lead')}>
+              <Plus className="w-4 h-4 mr-2" />
               New Deal
             </Button>
           </div>

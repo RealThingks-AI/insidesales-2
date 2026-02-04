@@ -65,6 +65,33 @@ export type Database = {
         }
         Relationships: []
       }
+      column_preferences: {
+        Row: {
+          column_widths: Json
+          created_at: string
+          id: string
+          module: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          column_widths?: Json
+          created_at?: string
+          id?: string
+          module: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          column_widths?: Json
+          created_at?: string
+          id?: string
+          module?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: []
+      }
       contacts: {
         Row: {
           company_name: string | null

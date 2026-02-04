@@ -14,7 +14,7 @@ import { DealsAdvancedFilter, AdvancedFilterState } from "./DealsAdvancedFilter"
 import { DealActionItemsModal } from "./DealActionItemsModal";
 import { DealActionsDropdown } from "./DealActionsDropdown";
 import { useToast } from "@/hooks/use-toast";
-
+import { useDealsColumnPreferences } from "@/hooks/useDealsColumnPreferences";
 interface ListViewProps {
   deals: Deal[];
   onDealClick: (deal: Deal) => void;
@@ -72,30 +72,20 @@ export const ListView = ({
     { field: 'total_revenue', label: 'Total Revenue', visible: false, order: 14 },
   ]);
 
-  // Column width state
-  const [columnWidths, setColumnWidths] = useState<Record<string, number>>({
-    'project_name': 200,
-    'customer_name': 150,
-    'lead_name': 150,
-    'lead_owner': 140,
-    'stage': 120,
-    'priority': 100,
-    'total_contract_value': 120,
-    'probability': 120,
-    'expected_closing_date': 140,
-    'region': 120,
-    'project_duration': 120,
-    'start_date': 120,
-    'end_date': 120,
-    'proposal_due_date': 140,
-    'total_revenue': 120,
-  });
+  // Column width preferences from database
+  const { columnWidths, updateColumnWidth, saveColumnWidths } = useDealsColumnPreferences();
 
   // Resize state
   const [isResizing, setIsResizing] = useState<string | null>(null);
   const [startX, setStartX] = useState(0);
   const [startWidth, setStartWidth] = useState(0);
+  const [tempColumnWidths, setTempColumnWidths] = useState<Record<string, number>>(columnWidths);
   const tableRef = useRef<HTMLTableElement>(null);
+
+  // Sync temp widths with persisted widths when they change
+  useEffect(() => {
+    setTempColumnWidths(columnWidths);
+  }, [columnWidths]);
 
   const { toast } = useToast();
 
@@ -118,7 +108,7 @@ export const ListView = ({
   const handleMouseDown = (e: React.MouseEvent, field: string) => {
     setIsResizing(field);
     setStartX(e.clientX);
-    setStartWidth(columnWidths[field] || 120);
+    setStartWidth(tempColumnWidths[field] || 120);
     e.preventDefault();
   };
 
@@ -128,7 +118,7 @@ export const ListView = ({
     const deltaX = e.clientX - startX;
     const newWidth = Math.max(80, startWidth + deltaX); // Minimum width of 80px
     
-    setColumnWidths(prev => ({
+    setTempColumnWidths(prev => ({
       ...prev,
       [isResizing]: newWidth
     }));
@@ -136,8 +126,8 @@ export const ListView = ({
 
   const handleMouseUp = () => {
     if (isResizing) {
-      // Save to localStorage
-      localStorage.setItem('deals-column-widths', JSON.stringify(columnWidths));
+      // Save to database
+      saveColumnWidths(tempColumnWidths);
       setIsResizing(null);
     }
   };
@@ -152,20 +142,7 @@ export const ListView = ({
         document.removeEventListener('mouseup', handleMouseUp);
       };
     }
-  }, [isResizing, startX, startWidth, columnWidths]);
-
-  // Load column widths from localStorage
-  useEffect(() => {
-    const savedWidths = localStorage.getItem('deals-column-widths');
-    if (savedWidths) {
-      try {
-        const parsed = JSON.parse(savedWidths);
-        setColumnWidths(parsed);
-      } catch (e) {
-        console.error('Failed to parse saved column widths:', e);
-      }
-    }
-  }, []);
+  }, [isResizing, startX, startWidth, tempColumnWidths]);
 
   const handleSelectAll = (checked: boolean) => {
     if (checked) {
@@ -441,9 +418,9 @@ export const ListView = ({
                     key={column.field} 
                     className="text-xs font-semibold cursor-pointer hover:bg-muted transition-colors relative bg-muted/80"
                     style={{ 
-                      width: `${columnWidths[column.field] || 120}px`,
-                      minWidth: `${columnWidths[column.field] || 120}px`,
-                      maxWidth: `${columnWidths[column.field] || 120}px`
+                      width: `${tempColumnWidths[column.field] || 120}px`,
+                      minWidth: `${tempColumnWidths[column.field] || 120}px`,
+                      maxWidth: `${tempColumnWidths[column.field] || 120}px`
                     }}
                     onClick={() => {
                       if (sortBy === column.field) {
@@ -500,9 +477,9 @@ export const ListView = ({
                         key={column.field} 
                         className="text-xs font-normal"
                         style={{ 
-                          width: `${columnWidths[column.field] || 120}px`,
-                          minWidth: `${columnWidths[column.field] || 120}px`,
-                          maxWidth: `${columnWidths[column.field] || 120}px`
+                          width: `${tempColumnWidths[column.field] || 120}px`,
+                          minWidth: `${tempColumnWidths[column.field] || 120}px`,
+                          maxWidth: `${tempColumnWidths[column.field] || 120}px`
                         }}
                       >
                         <InlineEditCell

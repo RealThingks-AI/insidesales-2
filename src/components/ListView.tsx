@@ -4,8 +4,9 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Deal, DealStage, DEAL_STAGES, STAGE_COLORS } from "@/types/deal";
-import { Search, Filter, X, Edit, Trash2, ArrowUp, ArrowDown, CheckSquare } from "lucide-react";
+import { Search, Filter, X, Edit, Trash2, ArrowUp, ArrowDown, ArrowUpDown, CheckSquare, ChevronLeft, ChevronRight } from "lucide-react";
 import { format } from "date-fns";
 import { InlineEditCell } from "./InlineEditCell";
 import { DealColumnCustomizer, DealColumnConfig } from "./DealColumnCustomizer";
@@ -45,7 +46,7 @@ export const ListView = ({
   const [sortOrder, setSortOrder] = useState<"asc" | "desc">("desc");
   const [selectedDeals, setSelectedDeals] = useState<Set<string>>(new Set());
   const [currentPage, setCurrentPage] = useState(1);
-  const [itemsPerPage] = useState(50);
+  const [itemsPerPage, setItemsPerPage] = useState(25);
   
   // Action Items Modal state
   const [actionModalOpen, setActionModalOpen] = useState(false);
@@ -54,26 +55,8 @@ export const ListView = ({
   // Column customizer state
   const [columnCustomizerOpen, setColumnCustomizerOpen] = useState(false);
 
-  const [columns, setColumns] = useState<DealColumnConfig[]>([
-    { field: 'project_name', label: 'Project', visible: true, order: 0 },
-    { field: 'customer_name', label: 'Customer', visible: true, order: 1 },
-    { field: 'lead_name', label: 'Lead Name', visible: true, order: 2 },
-    { field: 'lead_owner', label: 'Lead Owner', visible: true, order: 3 },
-    { field: 'stage', label: 'Stage', visible: true, order: 4 },
-    { field: 'priority', label: 'Priority', visible: true, order: 5 },
-    { field: 'total_contract_value', label: 'Value', visible: true, order: 6 },
-    { field: 'probability', label: 'Probability', visible: true, order: 7 },
-    { field: 'expected_closing_date', label: 'Expected Close', visible: true, order: 8 },
-    { field: 'region', label: 'Region', visible: false, order: 9 },
-    { field: 'project_duration', label: 'Duration', visible: false, order: 10 },
-    { field: 'start_date', label: 'Start Date', visible: false, order: 11 },
-    { field: 'end_date', label: 'End Date', visible: false, order: 12 },
-    { field: 'proposal_due_date', label: 'Proposal Due', visible: false, order: 13 },
-    { field: 'total_revenue', label: 'Total Revenue', visible: false, order: 14 },
-  ]);
-
-  // Column width preferences from database
-  const { columnWidths, updateColumnWidth, saveColumnWidths } = useDealsColumnPreferences();
+  // Column width and visibility preferences from database
+  const { columnWidths, columns, saveColumnWidths, saveColumns } = useDealsColumnPreferences();
 
   // Resize state
   const [isResizing, setIsResizing] = useState<string | null>(null);
@@ -350,12 +333,19 @@ export const ListView = ({
     setActionModalOpen(true);
   };
 
+  // Handle page size change
+  const handlePageSizeChange = (size: string) => {
+    setItemsPerPage(Number(size));
+    setCurrentPage(1);
+  };
+
   return (
     <div className="h-full flex flex-col bg-background">
       {/* Filter Bar - consistent with other modules */}
       <div className="flex-shrink-0 border-b bg-muted/30 px-6 py-3">
         <div className="flex flex-wrap items-center gap-3">
-          <div className="relative w-80">
+          {/* Search - responsive width like Action Items */}
+          <div className="relative flex-1 min-w-[200px] max-w-[300px]">
             <Search className="absolute left-3 top-1/2 transform -translate-y-1/2 text-muted-foreground w-4 h-4" />
             <Input
               placeholder="Search all deal details..."
@@ -402,7 +392,8 @@ export const ListView = ({
       </div>
 
       <div className="flex-1 min-h-0 flex flex-col">
-        <div className="flex-1 overflow-y-auto overflow-x-auto">
+        {/* Always show horizontal scrollbar */}
+        <div className="flex-1 overflow-y-auto overflow-x-scroll">
           <Table ref={tableRef} className="w-full min-w-max">
             <TableHeader className="sticky top-0 bg-muted/80 backdrop-blur-sm z-20 border-b-2">
               <TableRow className="hover:bg-muted/60 transition-colors border-b">
@@ -416,7 +407,7 @@ export const ListView = ({
                 {visibleColumns.map(column => (
                   <TableHead 
                     key={column.field} 
-                    className="text-xs font-semibold cursor-pointer hover:bg-muted transition-colors relative bg-muted/80"
+                    className="text-sm font-semibold cursor-pointer hover:bg-muted transition-colors relative bg-muted/80"
                     style={{ 
                       width: `${tempColumnWidths[column.field] || 120}px`,
                       minWidth: `${tempColumnWidths[column.field] || 120}px`,
@@ -434,7 +425,7 @@ export const ListView = ({
                     <div className="flex items-center gap-2 pr-4 text-foreground">
                       {column.label}
                       {sortBy !== column.field ? (
-                        <span className="text-muted-foreground/40">↕</span>
+                        <ArrowUpDown className="w-3 h-3 text-muted-foreground/40" />
                       ) : (
                         sortOrder === "asc" ? <ArrowUp className="w-3 h-3 text-foreground" /> : <ArrowDown className="w-3 h-3 text-foreground" />
                       )}
@@ -448,7 +439,7 @@ export const ListView = ({
                     />
                   </TableHead>
                 ))}
-                <TableHead className="w-32 min-w-32 bg-muted/80 text-xs font-semibold text-foreground">Actions</TableHead>
+                <TableHead className="w-32 min-w-32 bg-muted/80 text-sm font-semibold text-foreground">Actions</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -463,7 +454,7 @@ export const ListView = ({
                   <TableRow 
                     key={deal.id} 
                     className={`hover:bg-muted/50 transition-all ${
-                      selectedDeals.has(deal.id) ? 'bg-primary/10' : ''
+                      selectedDeals.has(deal.id) ? 'bg-primary/5' : ''
                     }`}
                   >
                     <TableCell onClick={(e) => e.stopPropagation()}>
@@ -475,7 +466,7 @@ export const ListView = ({
                     {visibleColumns.map(column => (
                       <TableCell 
                         key={column.field} 
-                        className="text-xs font-normal"
+                        className="text-sm"
                         style={{ 
                           width: `${tempColumnWidths[column.field] || 120}px`,
                           minWidth: `${tempColumnWidths[column.field] || 120}px`,
@@ -549,53 +540,54 @@ export const ListView = ({
         </div>
       )}
 
-      {/* Standard Pagination Footer */}
-      <div className="flex-shrink-0 border-t bg-background px-6 py-3">
-        <div className="flex items-center justify-between">
-          <span className="text-sm text-muted-foreground">
-            Showing {startIndex + 1}-{Math.min(startIndex + itemsPerPage, filteredAndSortedDeals.length)} of {filteredAndSortedDeals.length} deals
-          </span>
-          <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => setCurrentPage(1)}
-              disabled={currentPage === 1}
-            >
-              <span className="text-xs">««</span>
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
-              disabled={currentPage === 1}
-            >
-              Previous
-            </Button>
-            <span className="text-sm px-2">
-              Page {currentPage} of {totalPages || 1}
-            </span>
-            <Button
-              variant="outline"
-              size="sm"  
-              onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
-              disabled={currentPage >= totalPages}
-            >
-              Next
-            </Button>
-            <Button
-              variant="outline"
-              size="icon"
-              className="h-8 w-8"
-              onClick={() => setCurrentPage(totalPages)}
-              disabled={currentPage >= totalPages}
-            >
-              <span className="text-xs">»»</span>
-            </Button>
+      {/* Standard Pagination Footer - matching Action Items */}
+      {filteredAndSortedDeals.length > 0 && (
+        <div className="flex-shrink-0 border-t bg-background px-6 py-3">
+          <div className="flex items-center justify-between">
+            <div className="flex items-center gap-4">
+              <span className="text-sm text-muted-foreground">
+                Showing {startIndex + 1}-{Math.min(startIndex + itemsPerPage, filteredAndSortedDeals.length)} of {filteredAndSortedDeals.length} deals
+              </span>
+              <div className="flex items-center gap-2">
+                <span className="text-sm text-muted-foreground">Show:</span>
+                <Select value={itemsPerPage.toString()} onValueChange={handlePageSizeChange}>
+                  <SelectTrigger className="w-[70px]">
+                    <SelectValue />
+                  </SelectTrigger>
+                  <SelectContent>
+                    <SelectItem value="25">25</SelectItem>
+                    <SelectItem value="50">50</SelectItem>
+                    <SelectItem value="100">100</SelectItem>
+                  </SelectContent>
+                </Select>
+              </div>
+            </div>
+            <div className="flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.max(1, prev - 1))}
+                disabled={currentPage === 1}
+              >
+                <ChevronLeft className="h-4 w-4 mr-1" />
+                Previous
+              </Button>
+              <span className="text-sm px-2">
+                Page {currentPage} of {totalPages || 1}
+              </span>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setCurrentPage(prev => Math.min(totalPages, prev + 1))}
+                disabled={currentPage >= totalPages}
+              >
+                Next
+                <ChevronRight className="h-4 w-4 ml-1" />
+              </Button>
+            </div>
           </div>
         </div>
-      </div>
+      )}
 
       <DealActionItemsModal
         open={actionModalOpen}
@@ -607,7 +599,7 @@ export const ListView = ({
         open={columnCustomizerOpen}
         onOpenChange={setColumnCustomizerOpen}
         columns={columns}
-        onColumnsChange={setColumns}
+        onColumnsChange={saveColumns}
       />
     </div>
   );

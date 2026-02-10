@@ -1,12 +1,13 @@
 import { useState, useEffect, useMemo, useRef } from "react";
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table";
-import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
+import { AlertDialog, AlertDialogAction, AlertDialogCancel, AlertDialogContent, AlertDialogDescription, AlertDialogFooter, AlertDialogHeader, AlertDialogTitle } from "@/components/ui/alert-dialog";
 import { Deal, DealStage, DEAL_STAGES, STAGE_COLORS } from "@/types/deal";
-import { Search, Filter, X, Edit, Trash2, ArrowUp, ArrowDown, ArrowUpDown, CheckSquare, ChevronLeft, ChevronRight } from "lucide-react";
+import { Search, X, Pencil, Trash2, ArrowUp, ArrowDown, ArrowUpDown, ChevronLeft, ChevronRight, MoreHorizontal, ListTodo } from "lucide-react";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger, DropdownMenuSeparator } from "@/components/ui/dropdown-menu";
 import { format } from "date-fns";
 import { InlineEditCell } from "./InlineEditCell";
 import { DealColumnCustomizer, DealColumnConfig } from "./DealColumnCustomizer";
@@ -54,6 +55,10 @@ export const ListView = ({
 
   // Column customizer state
   const [columnCustomizerOpen, setColumnCustomizerOpen] = useState(false);
+  
+  // Delete confirmation state
+  const [deleteDialogOpen, setDeleteDialogOpen] = useState(false);
+  const [dealToDelete, setDealToDelete] = useState<string | null>(null);
 
   // Column width and visibility preferences from database
   const { columnWidths, columns, saveColumnWidths, saveColumns } = useDealsColumnPreferences();
@@ -391,141 +396,134 @@ export const ListView = ({
         </div>
       </div>
 
-      <div className="flex-1 min-h-0 flex flex-col">
-        {/* Always show horizontal scrollbar */}
-        <div className="flex-1 overflow-y-auto overflow-x-scroll">
-          <Table ref={tableRef} className="w-full min-w-max">
-            <TableHeader className="sticky top-0 bg-muted/80 backdrop-blur-sm z-20 border-b-2">
-              <TableRow className="hover:bg-muted/60 transition-colors border-b">
-                <TableHead className="w-12 min-w-12 bg-muted/80">
+      {/* Content Area - single scroll container */}
+      <div className="flex-1 min-h-0 overflow-auto">
+        <Table ref={tableRef} className="w-full">
+          <TableHeader className="sticky top-0 bg-muted/80 backdrop-blur-sm z-20 border-b-2">
+            <TableRow className="hover:bg-muted/60 transition-colors border-b">
+              <TableHead className="w-10 min-w-10 py-3 px-3 h-11 bg-muted/80">
                   <Checkbox
                     checked={selectedDeals.size === paginatedDeals.length && paginatedDeals.length > 0}
                     onCheckedChange={handleSelectAll}
                     className="transition-all hover:scale-110"
                   />
                 </TableHead>
-                {visibleColumns.map(column => (
-                  <TableHead 
-                    key={column.field} 
-                    className="text-sm font-semibold cursor-pointer hover:bg-muted transition-colors relative bg-muted/80"
-                    style={{ 
-                      width: `${tempColumnWidths[column.field] || 120}px`,
-                      minWidth: `${tempColumnWidths[column.field] || 120}px`,
-                      maxWidth: `${tempColumnWidths[column.field] || 120}px`
+              {visibleColumns.map(column => (
+                <TableHead 
+                  key={column.field} 
+                  className="text-sm font-semibold cursor-pointer hover:bg-muted transition-colors relative bg-muted/80 py-3 px-3 h-11"
+                  style={{ 
+                    width: `${tempColumnWidths[column.field] || 120}px`,
+                    minWidth: `${tempColumnWidths[column.field] || 120}px`,
+                    maxWidth: `${tempColumnWidths[column.field] || 120}px`
+                  }}
+                  onClick={() => {
+                    if (sortBy === column.field) {
+                      setSortOrder(sortOrder === "asc" ? "desc" : "asc");
+                    } else {
+                      setSortBy(column.field);
+                      setSortOrder("desc");
+                    }
+                  }}
+                >
+                  <div className="flex items-center gap-2 pr-4 text-foreground">
+                    {column.label}
+                    {sortBy !== column.field ? (
+                      <ArrowUpDown className="w-3 h-3 text-muted-foreground/40" />
+                    ) : (
+                      sortOrder === "asc" ? <ArrowUp className="w-3 h-3 text-foreground" /> : <ArrowDown className="w-3 h-3 text-foreground" />
+                    )}
+                  </div>
+                  <div
+                    className="absolute right-0 top-0 w-1 h-full cursor-col-resize hover:bg-primary/40 bg-transparent"
+                    onMouseDown={(e) => handleMouseDown(e, column.field)}
+                    style={{
+                      background: isResizing === column.field ? 'hsl(var(--primary) / 0.5)' : undefined
                     }}
-                    onClick={() => {
-                      if (sortBy === column.field) {
-                        setSortOrder(sortOrder === "asc" ? "desc" : "asc");
-                      } else {
-                        setSortBy(column.field);
-                        setSortOrder("desc");
-                      }
-                    }}
-                  >
-                    <div className="flex items-center gap-2 pr-4 text-foreground">
-                      {column.label}
-                      {sortBy !== column.field ? (
-                        <ArrowUpDown className="w-3 h-3 text-muted-foreground/40" />
-                      ) : (
-                        sortOrder === "asc" ? <ArrowUp className="w-3 h-3 text-foreground" /> : <ArrowDown className="w-3 h-3 text-foreground" />
-                      )}
-                    </div>
-                    <div
-                      className="absolute right-0 top-0 w-1 h-full cursor-col-resize hover:bg-primary/40 bg-transparent"
-                      onMouseDown={(e) => handleMouseDown(e, column.field)}
-                      style={{
-                        background: isResizing === column.field ? 'hsl(var(--primary) / 0.5)' : undefined
-                      }}
-                    />
-                  </TableHead>
-                ))}
-                <TableHead className="w-32 min-w-32 bg-muted/80 text-sm font-semibold text-foreground">Actions</TableHead>
+                  />
+                </TableHead>
+              ))}
+              <TableHead className="w-20 min-w-20 bg-muted/80 py-3 px-3 h-11"></TableHead>
               </TableRow>
             </TableHeader>
-            <TableBody>
-              {filteredAndSortedDeals.length === 0 ? (
-                <TableRow>
-                  <TableCell colSpan={visibleColumns.length + 2} className="text-center py-8 text-muted-foreground">
-                    No deals found
+          <TableBody>
+            {filteredAndSortedDeals.length === 0 ? (
+              <TableRow>
+                <TableCell colSpan={visibleColumns.length + 2} className="text-center py-8 text-muted-foreground">
+                  No deals found
+                </TableCell>
+              </TableRow>
+            ) : (
+              paginatedDeals.map((deal) => (
+                <TableRow 
+                  key={deal.id} 
+                  className={`group hover:bg-muted/50 transition-all ${
+                    selectedDeals.has(deal.id) ? 'bg-primary/5' : ''
+                  }`}
+                >
+                  <TableCell className="py-2 px-3" onClick={(e) => e.stopPropagation()}>
+                    <Checkbox
+                      checked={selectedDeals.has(deal.id)}
+                      onCheckedChange={(checked) => handleSelectDeal(deal.id, Boolean(checked))}
+                    />
                   </TableCell>
-                </TableRow>
-              ) : (
-                paginatedDeals.map((deal) => (
-                  <TableRow 
-                    key={deal.id} 
-                    className={`hover:bg-muted/50 transition-all ${
-                      selectedDeals.has(deal.id) ? 'bg-primary/5' : ''
-                    }`}
-                  >
-                    <TableCell onClick={(e) => e.stopPropagation()}>
-                      <Checkbox
-                        checked={selectedDeals.has(deal.id)}
-                        onCheckedChange={(checked) => handleSelectDeal(deal.id, Boolean(checked))}
+                  {visibleColumns.map(column => (
+                    <TableCell 
+                      key={column.field} 
+                      className="text-sm py-2 px-3"
+                      style={{ 
+                        width: `${tempColumnWidths[column.field] || 120}px`,
+                        minWidth: `${tempColumnWidths[column.field] || 120}px`,
+                        maxWidth: `${tempColumnWidths[column.field] || 120}px`
+                      }}
+                    >
+                      <InlineEditCell
+                        value={deal[column.field as keyof Deal]}
+                        field={column.field}
+                        dealId={deal.id}
+                        onSave={handleInlineEdit}
+                        type={getFieldType(column.field)}
+                        options={getFieldOptions(column.field)}
                       />
                     </TableCell>
-                    {visibleColumns.map(column => (
-                      <TableCell 
-                        key={column.field} 
-                        className="text-sm"
-                        style={{ 
-                          width: `${tempColumnWidths[column.field] || 120}px`,
-                          minWidth: `${tempColumnWidths[column.field] || 120}px`,
-                          maxWidth: `${tempColumnWidths[column.field] || 120}px`
-                        }}
-                      >
-                        <InlineEditCell
-                          value={deal[column.field as keyof Deal]}
-                          field={column.field}
-                          dealId={deal.id}
-                          onSave={handleInlineEdit}
-                          type={getFieldType(column.field)}
-                          options={getFieldOptions(column.field)}
-                        />
-                      </TableCell>
-                    ))}
-                    <TableCell>
-                      <div className="flex items-center gap-1">
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => handleActionClick(deal)}
-                          className="h-8 w-8 p-0"
-                          title="Actions"
-                        >
-                          <CheckSquare className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => onDealClick(deal)}
-                          className="h-8 w-8 p-0"
-                          title="Edit"
-                        >
-                          <Edit className="w-4 h-4" />
-                        </Button>
-                        <Button
-                          size="sm"
-                          variant="ghost"
-                          onClick={() => {
-                            onDeleteDeals([deal.id]);
-                            toast({
-                              title: "Deal deleted",
-                              description: `Successfully deleted ${deal.project_name || 'deal'}`,
-                            });
-                          }}
-                          className="h-8 w-8 p-0 text-destructive hover:text-destructive hover:bg-destructive/10"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-4 h-4" />
-                        </Button>
-                      </div>
-                    </TableCell>
-                  </TableRow>
-                ))
-              )}
-            </TableBody>
-          </Table>
-        </div>
+                  ))}
+                  <TableCell className="py-2 px-2" onClick={(e) => e.stopPropagation()}>
+                    <div className="opacity-0 group-hover:opacity-100 transition-opacity duration-150 flex justify-center">
+                      <DropdownMenu>
+                        <DropdownMenuTrigger asChild>
+                          <Button variant="ghost" size="icon" className="h-8 w-8 p-0">
+                            <MoreHorizontal className="h-4 w-4" />
+                          </Button>
+                        </DropdownMenuTrigger>
+                        <DropdownMenuContent align="end">
+                          <DropdownMenuItem onClick={() => onDealClick(deal)}>
+                            <Pencil className="h-4 w-4 mr-2" />
+                            Edit
+                          </DropdownMenuItem>
+                          <DropdownMenuItem onClick={() => handleActionClick(deal)}>
+                            <ListTodo className="h-4 w-4 mr-2" />
+                            Action Items
+                          </DropdownMenuItem>
+                          <DropdownMenuSeparator />
+                          <DropdownMenuItem 
+                            onClick={() => {
+                              setDealToDelete(deal.id);
+                              setDeleteDialogOpen(true);
+                            }}
+                            className="text-destructive focus:text-destructive"
+                          >
+                            <Trash2 className="h-4 w-4 mr-2" />
+                            Delete
+                          </DropdownMenuItem>
+                        </DropdownMenuContent>
+                      </DropdownMenu>
+                    </div>
+                  </TableCell>
+                </TableRow>
+              ))
+            )}
+          </TableBody>
+        </Table>
       </div>
 
       {/* Bulk Actions Bar */}
@@ -588,6 +586,37 @@ export const ListView = ({
           </div>
         </div>
       )}
+
+      {/* Delete Confirmation Dialog */}
+      <AlertDialog open={deleteDialogOpen} onOpenChange={setDeleteDialogOpen}>
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Delete Deal</AlertDialogTitle>
+            <AlertDialogDescription>
+              Are you sure you want to delete this deal? This action cannot be undone.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel>Cancel</AlertDialogCancel>
+            <AlertDialogAction 
+              onClick={() => {
+                if (dealToDelete) {
+                  onDeleteDeals([dealToDelete]);
+                  toast({
+                    title: "Deal deleted",
+                    description: "Deal has been successfully deleted",
+                  });
+                }
+                setDealToDelete(null);
+                setDeleteDialogOpen(false);
+              }} 
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              Delete
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
 
       <DealActionItemsModal
         open={actionModalOpen}

@@ -49,7 +49,7 @@ export function AnimatedStageHeaders({
       const parts: string[] = [];
       if (beforeCount > 0) parts.push(`repeat(${beforeCount}, minmax(240px, 1fr))`);
       parts.push('minmax(280px, 280px)'); // expanded stage fixed width
-      parts.push('minmax(800px, 3fr)'); // details panel - wider for side-by-side History/Action Items
+      parts.push('minmax(600px, 2fr)'); // details panel
       if (afterCount > 0) parts.push(`repeat(${afterCount}, minmax(240px, 1fr))`);
       
       return {

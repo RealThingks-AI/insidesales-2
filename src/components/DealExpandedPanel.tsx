@@ -628,11 +628,11 @@ export const DealExpandedPanel = ({ deal, onClose, onOpenActionItemModal, addDet
                   <TableHeader className="sticky top-0 z-10 bg-card">
                     <TableRow className="text-[11px] bg-muted/50">
                       <TableHead className="h-7 px-1 text-[11px] font-bold text-center" style={{ width: '3%' }}>#</TableHead>
-                      <TableHead className="h-7 px-2 text-[11px] font-bold" style={{ width: '60%' }}>Task</TableHead>
-                      <TableHead className="h-7 px-2 text-[11px] font-bold" style={{ width: '12%' }}>Assigned</TableHead>
-                      <TableHead className="h-7 px-2 text-[11px] font-bold" style={{ width: '12%' }}>Due</TableHead>
-                      <TableHead className="h-7 px-1 text-[11px] font-bold text-center" style={{ width: '10%' }}>Status</TableHead>
-                      <TableHead className="h-7 px-1" style={{ width: '5%' }}></TableHead>
+                      <TableHead className="h-7 px-2 text-[11px] font-bold" style={{ width: '70%' }}>Task</TableHead>
+                      <TableHead className="h-7 px-2 text-[11px] font-bold" style={{ width: '9%' }}>Assigned</TableHead>
+                      <TableHead className="h-7 px-2 text-[11px] font-bold" style={{ width: '8%' }}>Due</TableHead>
+                      <TableHead className="h-7 px-1 text-[11px] font-bold text-center" style={{ width: '7%' }}>Status</TableHead>
+                      <TableHead className="h-7 px-1" style={{ width: '3%' }}></TableHead>
                     </TableRow>
                   </TableHeader>
                   <TableBody>

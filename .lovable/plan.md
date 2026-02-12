@@ -1,89 +1,178 @@
 
-# Sticky Details Panel Aligned with Expanded Card
+
+# Refactor: Details Panel - Clean Up, Auto-scroll, Add Button and Section Logic
 
 ## Overview
-When a deal card is expanded, the details panel must appear **inline with the selected card** -- not at the top of the column. When scrolling up/down, the details panel should stay anchored at the same vertical position as the expanded card, scrolling naturally with it.
 
-## Current Problems
-1. `cardTopOffset` is measured via DOM after layout, but the measurement is unreliable and doesn't update on scroll
-2. `marginTop` on the details panel is static -- it doesn't follow the card during scroll
-3. The scroll logic tries to center things but doesn't reliably put the stage column at top-left
+Streamline the expanded details panel by replacing the expand icon, cleaning up columns, fixing sort/scroll behavior, separating completed action items into History, filtering history to only manual logs and status changes, and adding a unified "Add" button with a modal.
 
-## Solution
+---
 
-The key insight from the user's diagrams: the details panel should start at the **same row as the expanded card** within the stage column, not at the top of the details column. When scrolling, both the card and details panel scroll together naturally.
+## 1. Replace "Expand Details" icon (DealCard.tsx)
 
-### Approach: Split the details column into "before-card spacer" + "details panel"
+- Replace `PanelRightOpen` import with `Activity` from lucide-react
+- Update the expand button icon from `<PanelRightOpen>` to `<Activity>`
 
-Instead of using `marginTop` or `sticky`, we render the details column content as:
-1. A transparent spacer div whose height equals the vertical offset of the expanded card within its stage column
-2. The actual details panel below the spacer
+## 2. Sort newest-at-bottom + auto-scroll (DealExpandedPanel.tsx)
 
-This way, the details panel is always vertically aligned with the expanded card and scrolls naturally with it -- no sticky positioning needed.
+- Change `historySortDirection` default from `'desc'` to `'asc'` (already `'asc'`, but ensure DB query uses `ascending: true` instead of `false`)
+- Change audit log query to `order('created_at', { ascending: true })` so newest items are at the bottom
+- Sort action items by `created_at` ascending
+- Add `useRef` refs for both scroll containers (`historyScrollRef`, `actionItemsScrollRef`)
+- Add `useEffect` that scrolls both containers to bottom (`scrollTop = scrollHeight`) whenever data updates
+- Remove all sort button wrappers and sort icon renders from column headers -- keep plain text headers only
+- Remove `handleHistorySort`, `getHistorySortIcon`, `handleActionItemSort`, `getActionItemSortIcon` functions and related state (`historySortField`, `historySortDirection`, `actionItemSortField`, `actionItemSortDirection`)
 
-### File Changes
+## 3. Completed action items move to History section (DealExpandedPanel.tsx)
 
-#### 1. `src/components/KanbanBoard.tsx`
+- Split `actionItems` into two filtered lists:
+  - `activeActionItems`: status is "Open" or "In Progress" (displayed in Action Items section)
+  - `completedActionItems`: status is "Completed" or "Cancelled" (merged into History section)
+- In History, merge `filteredSortedLogs` with `completedActionItems` formatted as history-like entries:
+  - `message`: "Task Title - Completed" (or "- Cancelled")
+  - `created_at`: from the action item's `created_at`
+  - `user_id`: from `assigned_to`
+- Sort merged list by `created_at` ascending (newest at bottom)
+- Action Items section only renders `activeActionItems`
 
-**Remove `cardTopOffset` state and its measurement `useEffect`** (lines 63, 480-502). Replace with a simpler approach:
+## 4. History section -- only show manual logs and action item status updates (DealExpandedPanel.tsx)
 
-**Add a ref-based offset calculation:** Instead of storing `cardTopOffset` in state (which causes re-renders and timing issues), calculate the offset directly in the render by measuring the index of the expanded card within its stage's deal list. Use the card index to compute the spacer height.
+- Filter `auditLogs` to only include entries where:
+  - `details.manual_entry === true` (user-added logs: Note, Call, Meeting, Email), OR
+  - `details.action_item_title` exists (action item status change logs)
+- This excludes all system-generated deal field change logs (create, update, stage changes, etc.)
 
-**Update `performLayoutSafeScroll`:**
-- Horizontal: scroll so the expanded stage column's left edge is at position 0 (left edge of container)
-- Vertical: scroll so the expanded card is near the top of the viewport (below sticky header)
-- Simplified logic: `targetScrollLeft = stageEl.offsetLeft - paddingMargin`, `targetScrollTop = cardEl.offsetTop - stickyHeaderHeight - paddingMargin`
+## 5. History Section column changes
 
-**Update `getGridColumns`:**
-- Keep expanded stage at `minmax(280px, 280px)`
-- Change details panel to `minmax(600px, 2fr)` to fill roughly half the viewport
-- Other stages remain at `minmax(240px, 1fr)`
+**Remove**: Type column (the colored dot + label column)
+**Keep**: #, Changes, By, Time, Eye icon
 
-**Update details panel rendering** (lines 786-803):
-- Remove `topOffset={cardTopOffset}` prop
-- Instead, calculate the card's position within the stage column and render a spacer div before the `InlineDetailsPanel`
-- Use a ref callback to measure the expanded card's `offsetTop` relative to the stage column, then set that as the spacer height
-
-#### 2. `src/components/kanban/InlineDetailsPanel.tsx`
-
-**Remove `topOffset` prop entirely.** Simplify the component:
-- Remove `marginTop` styling
-- Remove `maxHeight` calculation based on `topOffset`
-- Keep `minHeight: 400px`
-- Add `overflow-y: auto` and a reasonable `maxHeight` (e.g., `calc(100vh - 180px)`) so the panel is independently scrollable if content is tall
-- Remove animation classes (entering/exiting) -- the spacer approach handles visual alignment
-
-#### 3. `src/components/kanban/AnimatedStageHeaders.tsx`
-
-**Update grid column sizing** to match the new `getGridColumns` values (change `minmax(800px, 3fr)` to `minmax(600px, 2fr)` to stay in sync).
-
-### Scroll Behavior
-
-**On expand:**
-1. Grid restructures with the details column inserted after the expanded stage
-2. A spacer div pushes the details panel down to align with the expanded card
-3. Container scrolls so the expanded stage is at the left edge and the expanded card is near the top
-4. Both the card and details panel are visible side-by-side
-
-**On scroll up:** Cards above the expanded card become visible. The details panel scrolls down naturally (it's anchored to the card's position in the DOM).
-
-**On scroll down:** Cards below become visible. The details panel scrolls up naturally with the card.
-
-This matches the user's diagrams exactly -- the details panel always starts inline with the expanded card.
-
-### Technical Details
-
-**Spacer height calculation:**
+New header row (plain text, no sort buttons):
 ```
-// In the render, before InlineDetailsPanel:
-const cardEl = scrollContainerRef.current?.querySelector(`[data-deal-id="${expandedDealId}"]`);
-const stageCol = scrollContainerRef.current?.querySelector(`[data-stage-column="${expandedStage}"]`);
-// spacerHeight = cardEl.offsetTop - stageCol.offsetTop (adjusted for padding)
+| # | Changes | By | Time | (eye) |
 ```
 
-Since DOM measurements in render aren't ideal, we'll use a `useEffect` + state approach but simplified: measure once after `expanding` transition starts, store as `detailsSpacerHeight`, and use it to render the spacer.
+Column widths adjusted: Changes gets the space freed from removing Type.
 
-**Files modified:**
-- `src/components/KanbanBoard.tsx` -- scroll logic, grid sizing, spacer rendering
-- `src/components/kanban/InlineDetailsPanel.tsx` -- remove offset props, simplify styling
-- `src/components/kanban/AnimatedStageHeaders.tsx` -- sync header grid sizing
+## 6. Action Items Section column changes
+
+**Remove**: Priority column (the priority dot column)
+**Keep**: #, Task, Assigned, Due, Status, Actions (...)
+
+New header row (plain text, no sort buttons):
+```
+| # | Task | Assigned | Due | Status | ... |
+```
+
+## 7. Status change log format update (DealExpandedPanel.tsx)
+
+In `handleStatusChange`, update the log message format from:
+```
+"Action item status changed: OldStatus -> NewStatus"
+```
+to:
+```
+"TaskTitle -> NewStatus"
+```
+
+This shows only the task name and the updated status (not the old status).
+
+## 8. Date format update
+
+- Verify `formatHistoryDateTime` uses `'HH:mm dd-MM-yy'` (already correct)
+- Update action item due date display from `format(date, 'dd-MMM-yy')` to `format(date, 'HH:mm dd-MM-yy')` where time is available; for date-only values, use `'dd-MM-yy'`
+
+## 9. Add "Add" button in Details header (AnimatedStageHeaders.tsx)
+
+- Replace the "Details" text in the details header with an "Add" button (`Plus` icon + "Add" text)
+- Add a new prop `onAddDetail` callback to `AnimatedStageHeadersProps`
+- Wire the button click to `onAddDetail()`
+
+## 10. Unified "Add Detail" Modal (DealExpandedPanel.tsx)
+
+- Add new state: `addDetailOpen` (boolean), `addDetailType` ('log' | 'action_item')
+- Replace existing "Add Log" dialog with a unified modal:
+  - **Type selector**: Dropdown with "Log" and "Action Item" options
+  - **If "Log" selected**: Show log type dropdown (Note only, simplified) + description textarea
+  - **If "Action Item" selected**: Show Title field (required), with a collapsible "More options" section (collapsed by default) containing: Assigned To dropdown, Due Date input, Priority dropdown, Status dropdown
+- On save:
+  - Log: insert into `security_audit_log` with `manual_entry: true`
+  - Action Item: insert into `action_items` table with `module_type: 'deals'` and `module_id: deal.id`
+- Remove the old `addLogOpen` state and dialog
+
+## Files Modified
+
+1. **`src/components/DealCard.tsx`** -- Replace `PanelRightOpen` with `Activity` icon
+2. **`src/components/DealExpandedPanel.tsx`** -- All section logic changes: filtering, sorting, auto-scroll, column cleanup, merged history, unified Add modal, status change format, date format
+3. **`src/components/kanban/AnimatedStageHeaders.tsx`** -- Replace "Details" header with "Add" button, add `onAddDetail` prop
+
+## Technical Details
+
+**Auto-scroll implementation:**
+```tsx
+const historyScrollRef = useRef<HTMLDivElement>(null);
+const actionItemsScrollRef = useRef<HTMLDivElement>(null);
+
+useEffect(() => {
+  setTimeout(() => {
+    if (historyScrollRef.current) {
+      historyScrollRef.current.scrollTop = historyScrollRef.current.scrollHeight;
+    }
+    if (actionItemsScrollRef.current) {
+      actionItemsScrollRef.current.scrollTop = actionItemsScrollRef.current.scrollHeight;
+    }
+  }, 100);
+}, [mergedHistory, activeActionItems]);
+```
+
+**History filtering (manual logs + status changes only):**
+```tsx
+const manualAndStatusLogs = useMemo(() => {
+  return auditLogs.filter(log => {
+    const details = log.details as any;
+    return details?.manual_entry === true || details?.action_item_title;
+  });
+}, [auditLogs]);
+```
+
+**Merged history with completed action items:**
+```tsx
+const mergedHistory = useMemo(() => {
+  const completedAsHistory = completedActionItems.map(item => ({
+    id: `completed-${item.id}`,
+    message: `${item.title} - ${item.status}`,
+    user_id: item.assigned_to,
+    created_at: item.created_at,
+    isCompletedAction: true,
+  }));
+  return [...mappedLogs, ...completedAsHistory]
+    .sort((a, b) => new Date(a.created_at).getTime() - new Date(b.created_at).getTime());
+}, [manualAndStatusLogs, completedActionItems]);
+```
+
+**Status change log format:**
+```tsx
+// In handleStatusChange:
+message: `${item?.title} → ${status}`,
+```
+
+**Add Detail Modal type switching:**
+```tsx
+<Select value={addDetailType} onValueChange={v => setAddDetailType(v)}>
+  <SelectItem value="log">Log</SelectItem>
+  <SelectItem value="action_item">Action Item</SelectItem>
+</Select>
+
+{addDetailType === 'action_item' && (
+  <>
+    <Input placeholder="Title" value={actionTitle} ... />
+    <Collapsible>
+      <CollapsibleTrigger>More options</CollapsibleTrigger>
+      <CollapsibleContent>
+        {/* Assigned To, Due Date, Priority, Status */}
+      </CollapsibleContent>
+    </Collapsible>
+  </>
+)}
+```
+

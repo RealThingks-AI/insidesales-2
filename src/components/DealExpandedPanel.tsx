@@ -889,7 +889,7 @@ export const DealExpandedPanel = ({ deal, onClose, onOpenActionItemModal, addDet
                   <SelectValue />
                 </SelectTrigger>
                 <SelectContent>
-                  <SelectItem value="log">Log</SelectItem>
+                  <SelectItem value="log">Update</SelectItem>
                   <SelectItem value="action_item">Action Item</SelectItem>
                 </SelectContent>
               </Select>

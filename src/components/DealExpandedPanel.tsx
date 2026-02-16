@@ -613,15 +613,15 @@ export const DealExpandedPanel = ({ deal, onClose, onOpenActionItemModal, addDet
                   </TableBody>
                 </Table>
               }
-              {/* Floating + button for History */}
+            </div>
+            <div className="flex justify-end px-2 py-1">
               <button
                 onClick={() => {
                   setAddDetailType('log');
                   setAddDetailFromSection('log');
                   setAddDetailOpen(true);
                 }}
-                className="absolute bottom-2 right-2 z-20 h-7 w-7 rounded-full bg-primary text-primary-foreground shadow-md flex items-center justify-center hover:bg-primary/90 transition-colors">
-
+                className="h-7 w-7 rounded-full bg-primary text-primary-foreground shadow-md flex items-center justify-center hover:bg-primary/90 transition-colors">
                 <Plus className="h-4 w-4" />
               </button>
             </div>
@@ -765,15 +765,15 @@ export const DealExpandedPanel = ({ deal, onClose, onOpenActionItemModal, addDet
                   </TableBody>
                 </Table>
               }
-              {/* Floating + button for Action Items */}
+            </div>
+            <div className="flex justify-end px-2 py-1">
               <button
                 onClick={() => {
                   setAddDetailType('action_item');
                   setAddDetailFromSection('action_item');
                   setAddDetailOpen(true);
                 }}
-                className="absolute bottom-2 right-2 z-20 h-7 w-7 rounded-full bg-primary text-primary-foreground shadow-md flex items-center justify-center hover:bg-primary/90 transition-colors">
-
+                className="h-7 w-7 rounded-full bg-primary text-primary-foreground shadow-md flex items-center justify-center hover:bg-primary/90 transition-colors">
                 <Plus className="h-4 w-4" />
               </button>
             </div>

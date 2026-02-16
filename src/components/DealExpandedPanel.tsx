@@ -559,7 +559,8 @@ export const DealExpandedPanel = ({ deal, onClose, onOpenActionItemModal, addDet
               <Table>
                   <TableHeader className="sticky top-0 z-10 bg-card">
                     <TableRow className="text-[11px] bg-muted/50">
-                      <TableHead className="h-7 px-2 text-[11px] font-bold" style={{ width: '77%' }}>Updates</TableHead>
+                      <TableHead className="h-7 px-1" style={{ width: '3%' }}></TableHead>
+                      <TableHead className="h-7 px-2 text-[11px] font-bold" style={{ width: '74%' }}>Updates</TableHead>
                       <TableHead className="h-7 px-2 text-[11px] font-bold" style={{ width: '10%' }}>By</TableHead>
                       <TableHead className="h-7 px-2 text-[11px] font-bold" style={{ width: '10%' }}>Time</TableHead>
                       <TableHead className="h-7 px-1" style={{ width: '3%' }}></TableHead>
@@ -568,7 +569,7 @@ export const DealExpandedPanel = ({ deal, onClose, onOpenActionItemModal, addDet
                   <TableBody>
                     {mergedHistory.length === 0 ?
                   <TableRow>
-                        <TableCell colSpan={4} className="text-center py-6 text-muted-foreground">
+                        <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">
                           <div className="flex items-center justify-center">
                             <History className="h-4 w-4 mr-2" />
                             <span className="text-xs">No history yet</span>
@@ -578,7 +579,7 @@ export const DealExpandedPanel = ({ deal, onClose, onOpenActionItemModal, addDet
 
                   mergedHistory.map((entry, index) =>
                   <TableRow key={entry.id} className="text-xs group cursor-pointer hover:bg-muted/30">
-                        {/* # hidden from header but visible in rows */}
+                        <TableCell className="py-1.5 px-1 text-[11px] text-muted-foreground text-center">{index + 1}</TableCell>
                         <TableCell className="py-1.5 px-2">
                           {entry.originalLog ?
                       <button
@@ -637,7 +638,8 @@ export const DealExpandedPanel = ({ deal, onClose, onOpenActionItemModal, addDet
               <Table>
                   <TableHeader className="sticky top-0 z-10 bg-card">
                     <TableRow className="text-[11px] bg-muted/50">
-                      <TableHead className="h-7 px-2 text-[11px] font-bold" style={{ width: '73%' }}>Action Items</TableHead>
+                      <TableHead className="h-7 px-1" style={{ width: '3%' }}></TableHead>
+                      <TableHead className="h-7 px-2 text-[11px] font-bold" style={{ width: '70%' }}>Action Items</TableHead>
                       <TableHead className="h-7 px-2 text-[11px] font-bold" style={{ width: '9%' }}>Assigned</TableHead>
                       <TableHead className="h-7 px-2 text-[11px] font-bold" style={{ width: '8%' }}>Due</TableHead>
                       <TableHead className="h-7 px-1 text-[11px] font-bold text-center" style={{ width: '7%' }}>Status</TableHead>
@@ -647,7 +649,7 @@ export const DealExpandedPanel = ({ deal, onClose, onOpenActionItemModal, addDet
                   <TableBody>
                     {activeActionItems.length === 0 ?
                   <TableRow>
-                        <TableCell colSpan={5} className="text-center py-6 text-muted-foreground">
+                        <TableCell colSpan={6} className="text-center py-6 text-muted-foreground">
                           <div className="flex flex-col items-center justify-center">
                             <ListTodo className="h-4 w-4 mb-1" />
                             <span className="text-xs">No active action items</span>
@@ -672,7 +674,7 @@ export const DealExpandedPanel = ({ deal, onClose, onOpenActionItemModal, addDet
                     className="text-xs group cursor-pointer hover:bg-muted/30"
                     onClick={() => handleActionItemClick(item)}>
 
-                        {/* # hidden from header but visible in rows */}
+                        <TableCell className="py-1.5 px-1 text-[11px] text-muted-foreground text-center">{index + 1}</TableCell>
 
                         {/* Task */}
                         <TableCell className="py-1.5 px-2">

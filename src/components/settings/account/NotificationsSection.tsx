@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Switch } from '@/components/ui/switch';
 import { Label } from '@/components/ui/label';
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
-import { Bell, Mail, MessageSquare, Clock } from 'lucide-react';
+import { Bell, Mail, MessageSquare, Clock, AlarmClock } from 'lucide-react';
 import { supabase } from '@/integrations/supabase/client';
 import { toast } from 'sonner';
 
@@ -20,15 +20,29 @@ interface NotificationPrefs {
   leads_notifications: boolean;
   contacts_notifications: boolean;
   accounts_notifications: boolean;
+  daily_reminder_time: string;
 }
 
 interface NotificationsSectionProps {
   notificationPrefs: NotificationPrefs;
   setNotificationPrefs: React.Dispatch<React.SetStateAction<NotificationPrefs>>;
   userId: string;
+  userTimezone?: string;
 }
 
-const NotificationsSection = ({ notificationPrefs, setNotificationPrefs, userId }: NotificationsSectionProps) => {
+// Generate time options from 06:00 to 22:00 in 30-min intervals
+const TIME_OPTIONS = Array.from({ length: 33 }, (_, i) => {
+  const totalMinutes = 6 * 60 + i * 30;
+  const hours = Math.floor(totalMinutes / 60);
+  const minutes = totalMinutes % 60;
+  const value = `${hours.toString().padStart(2, '0')}:${minutes.toString().padStart(2, '0')}`;
+  const hour12 = hours % 12 || 12;
+  const ampm = hours < 12 ? 'AM' : 'PM';
+  const label = `${hour12}:${minutes.toString().padStart(2, '0')} ${ampm}`;
+  return { value, label };
+});
+
+const NotificationsSection = ({ notificationPrefs, setNotificationPrefs, userId, userTimezone }: NotificationsSectionProps) => {
   const saveTimeoutRef = useRef<NodeJS.Timeout | null>(null);
   const lastSavedRef = useRef<string>(JSON.stringify(notificationPrefs));
   const [isSaving, setIsSaving] = useState(false);
@@ -41,9 +55,21 @@ const NotificationsSection = ({ notificationPrefs, setNotificationPrefs, userId 
         .from('notification_preferences')
         .upsert({
           user_id: userId,
-          ...prefs,
+          email_notifications: prefs.email_notifications,
+          in_app_notifications: prefs.in_app_notifications,
+          push_notifications: prefs.push_notifications,
+          lead_assigned: prefs.lead_assigned,
+          deal_updates: prefs.deal_updates,
+          task_reminders: prefs.task_reminders,
+          meeting_reminders: prefs.meeting_reminders,
+          weekly_digest: prefs.weekly_digest,
+          notification_frequency: prefs.notification_frequency,
+          leads_notifications: prefs.leads_notifications,
+          contacts_notifications: prefs.contacts_notifications,
+          accounts_notifications: prefs.accounts_notifications,
+          daily_reminder_time: prefs.daily_reminder_time,
           updated_at: new Date().toISOString()
-        }, { onConflict: 'user_id' });
+        } as any, { onConflict: 'user_id' });
       if (error) throw error;
       lastSavedRef.current = JSON.stringify(prefs);
     } catch (error) {
@@ -131,6 +157,44 @@ const NotificationsSection = ({ notificationPrefs, setNotificationPrefs, userId 
           </Select>
         </CardContent>
       </Card>
+
+      {/* Daily Reminder Time - shown when task_reminders is enabled */}
+      {notificationPrefs.task_reminders && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="flex items-center gap-2 text-base">
+              <AlarmClock className="h-4 w-4" />
+              Daily Action Item Reminder
+            </CardTitle>
+            <CardDescription className="text-xs">
+              Get a daily summary of your pending action items at your preferred time
+              {userTimezone && (
+                <span className="block mt-1 text-muted-foreground">
+                  Timezone: <span className="font-medium">{userTimezone}</span>
+                </span>
+              )}
+            </CardDescription>
+          </CardHeader>
+          <CardContent>
+            <div className="flex items-center gap-3">
+              <Label className="text-sm font-medium whitespace-nowrap">Reminder Time</Label>
+              <Select
+                value={notificationPrefs.daily_reminder_time}
+                onValueChange={(value) => updatePref('daily_reminder_time', value)}
+              >
+                <SelectTrigger className="w-[160px]">
+                  <SelectValue />
+                </SelectTrigger>
+                <SelectContent>
+                  {TIME_OPTIONS.map(opt => (
+                    <SelectItem key={opt.value} value={opt.value}>{opt.label}</SelectItem>
+                  ))}
+                </SelectContent>
+              </Select>
+            </div>
+          </CardContent>
+        </Card>
+      )}
 
       {/* Module Notifications */}
       <Card>

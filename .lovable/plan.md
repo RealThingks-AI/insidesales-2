@@ -1,63 +1,91 @@
 
 
-# Daily Action Item Reminder System
+## Fix Note Editor Bullet Point & Stakeholders Layout Issues
 
-## Overview
-Build a scheduled edge function that runs every 15 minutes, checks each user's preferred reminder time (in their timezone), and creates in-app notification reminders for incomplete action items. Users configure the reminder time in Settings > Notifications.
+### Issues Found
 
-## Changes Required
+1. **Bullet point moves when typing**: `autoFocus` on the Textarea (line 633) places the cursor at position 0 (before `"• "`), so typing inserts text before the bullet instead of after it.
 
-### 1. Database Migration
-Add a `daily_reminder_time` column to `notification_preferences` table (e.g., `'09:00'`) and a `last_reminder_sent_at` column to track when the last reminder was sent (prevents duplicates).
+2. **Notes panel lacks proper scrollbar**: The notes summary panel (line 580-679) has a `max-h-[280px]` on the inner div but the outer wrapper has no scroll constraint, so it still pushes content.
 
-```sql
-ALTER TABLE notification_preferences 
-  ADD COLUMN daily_reminder_time text DEFAULT '09:00',
-  ADD COLUMN last_reminder_sent_at date;
+3. **Stakeholders section grows unbounded**: The `StakeholdersSection` component has no max-height. When the Notes panel is open with many notes, it consumes all vertical space, squishing the Updates and Action Items sections to near-zero height.
+
+### Changes (single file: `src/components/DealExpandedPanel.tsx`)
+
+#### Fix 1: Bullet cursor positioning (line 628-634)
+
+Replace `autoFocus` on the Textarea with a `ref` callback that focuses the element AND places the cursor at the end of the text (after `"• "`):
+
+```tsx
+<Textarea
+  value={noteText}
+  onChange={(e) => setNoteText(e.target.value)}
+  onKeyDown={handleNoteKeyDown}
+  className="min-h-[100px] text-xs resize-none"
+  ref={(el) => {
+    if (el) {
+      el.focus();
+      const len = el.value.length;
+      el.selectionStart = len;
+      el.selectionEnd = len;
+    }
+  }}
+/>
 ```
 
-### 2. Edge Function: `daily-action-reminders`
-**New file: `supabase/functions/daily-action-reminders/index.ts`**
+#### Fix 2: Constrain Stakeholders section height
 
-Logic:
-1. Query all users from `notification_preferences` where `task_reminders = true`
-2. Join with `profiles` to get their `timezone`
-3. For each user, check if current time in their timezone matches their `daily_reminder_time` (within a 15-min window) AND `last_reminder_sent_at != today`
-4. Query `action_items` where `assigned_to = user_id` AND `status != 'Completed'` AND `archived_at IS NULL`
-5. If there are pending items, insert a summary notification into `notifications` table
-6. Update `last_reminder_sent_at` to today
+Wrap the StakeholdersSection output in a container with `max-h` and `overflow-y-auto` so it scrolls when content is large. Change the outer div (line 462) from:
 
-### 3. Cron Job
-Schedule the edge function to run every 15 minutes using `pg_cron` + `pg_net`:
-```sql
-SELECT cron.schedule(
-  'daily-action-reminders',
-  '*/15 * * * *',
-  $$ SELECT net.http_post(...) $$
-);
+```tsx
+<div className="px-3 pt-1.5 pb-1">
 ```
 
-### 4. UI: Add Reminder Time Picker in NotificationsSection
-**File: `src/components/settings/account/NotificationsSection.tsx`**
+to:
 
-Add a new card "Daily Reminder Time" (shown when `task_reminders` is enabled):
-- A time select dropdown (e.g., 06:00 through 22:00 in 30-min intervals)
-- Small helper text: "Reminder sent daily at this time in your timezone ({timezone})"
-- The selected value is saved as `daily_reminder_time` in `notification_preferences`
+```tsx
+<div className="px-3 pt-1.5 pb-1 max-h-[45%] overflow-y-auto shrink-0">
+```
 
-Update the `NotificationPrefs` interface and `AccountSettingsPage` to include the new `daily_reminder_time` field.
+However, since this is not inside a flex parent that uses percentage heights well, a better approach is to change the parent layout. The parent (line 1182) is:
 
-### 5. Update AccountSettingsPage.tsx
-- Add `daily_reminder_time` to the `NotificationPrefs` interface and default state
-- Pass user's timezone from profile to `NotificationsSection` so it can display it
+```tsx
+<div className="flex-1 min-h-0 flex flex-col overflow-hidden gap-1">
+```
 
-## File Changes Summary
+The fix: Make the StakeholdersSection a flex item that can shrink, and give it a max-height so it doesn't dominate. Change line 1184 from:
 
-| File | Change |
-|---|---|
-| DB migration | Add `daily_reminder_time` and `last_reminder_sent_at` columns |
-| `supabase/functions/daily-action-reminders/index.ts` | New edge function |
-| `src/components/settings/account/NotificationsSection.tsx` | Add reminder time picker UI |
-| `src/components/settings/AccountSettingsPage.tsx` | Update interface, pass timezone prop |
-| Cron job (SQL insert) | Schedule every 15 minutes |
+```tsx
+<StakeholdersSection deal={deal} queryClient={queryClient} />
+```
+
+to wrap it in a constrained container:
+
+```tsx
+<div className="shrink-0 max-h-[40%] overflow-y-auto">
+  <StakeholdersSection deal={deal} queryClient={queryClient} />
+</div>
+```
+
+This ensures:
+- Stakeholders section gets at most 40% of the panel height
+- When content exceeds that, a scrollbar appears
+- Updates and Action Items always get their fair share of space
+
+#### Fix 3: Ensure notes panel scrolls properly
+
+The notes summary panel (line 596) already has `max-h-[280px] overflow-y-auto`, but when inside the constrained container from Fix 2, this works correctly. No additional change needed here -- the outer scroll from Fix 2 handles it.
+
+### Summary
+
+| Change | Line(s) | Description |
+|--------|---------|-------------|
+| Replace `autoFocus` with ref callback | 628-634 | Cursor placed after bullet on open |
+| Wrap StakeholdersSection in scrollable container | 1184 | Max 40% height with scrollbar |
+
+### Technical Notes
+
+- The ref callback fires on every render, but since `el.focus()` is idempotent when already focused, this is harmless
+- The `max-h-[40%]` works because the parent has `flex-1 min-h-0` which resolves to an actual pixel height
+- Updates and Action Items sections keep their `flex-1 min-h-0` with `h-[220px]`, ensuring they share remaining space equally
 

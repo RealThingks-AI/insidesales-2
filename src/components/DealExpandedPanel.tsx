@@ -1046,12 +1046,6 @@ export const DealExpandedPanel = ({
           {/* History Section */}
           <div className="px-3 pt-1 pb-0.5 flex flex-col flex-1 min-h-0">
             <div className="bg-muted/20 border border-border/60 rounded-lg overflow-hidden flex flex-col flex-1 min-h-0">
-              <div className="flex items-center px-3 py-1.5 bg-muted/50 border-b border-border/40">
-                <div className="flex items-center gap-2">
-                  <History className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-xs font-semibold text-foreground">Updates</span>
-                </div>
-              </div>
               <div className="flex-1 min-h-0 overflow-y-auto" ref={historyScrollRef}>
                 {isLoading ?
                 <div className="flex items-center justify-center py-6">
@@ -1149,12 +1143,6 @@ export const DealExpandedPanel = ({
           {/* Action Items Section */}
           <div className="px-3 pt-0.5 pb-1 flex flex-col flex-1 min-h-0">
             <div className="bg-muted/20 border border-border/60 rounded-lg overflow-hidden flex flex-col flex-1 min-h-0">
-              <div className="flex items-center px-3 py-1.5 bg-muted/50 border-b border-border/40">
-                <div className="flex items-center gap-2">
-                  <ListTodo className="h-4 w-4 text-muted-foreground" />
-                  <span className="text-xs font-semibold text-foreground">Action Items</span>
-                </div>
-              </div>
               <div className="flex-1 min-h-0 overflow-y-auto" ref={actionItemsScrollRef}>
                 {isLoading ?
                 <div className="flex items-center justify-center py-6">

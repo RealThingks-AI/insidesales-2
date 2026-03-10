@@ -50,7 +50,7 @@ export function AnimatedStageHeaders({
       // Grid: [before stages] [expanded stage 280px] [details ~60%] [after stages]
       const parts: string[] = [];
       if (beforeCount > 0) parts.push(`repeat(${beforeCount}, minmax(240px, 1fr))`);
-      parts.push('minmax(300px, 300px)'); // expanded stage fixed width
+      parts.push('minmax(240px, 1fr)'); // expanded stage same as others
       parts.push('minmax(825px, 3.5fr)'); // details panel
       if (afterCount > 0) parts.push(`repeat(${afterCount}, minmax(240px, 1fr))`);
       
@@ -87,7 +87,7 @@ export function AnimatedStageHeaders({
                 'stage-header-item p-2 rounded-lg border transition-all duration-300',
                 STAGE_BG_COLORS[stage],
                 STAGE_COLORS[stage],
-                isActiveStage && (isExpanding || isExpanded || isCollapsing) && 'w-[280px] flex-shrink-0',
+                isActiveStage && (isExpanding || isExpanded || isCollapsing) && 'flex-shrink-0',
               )}
             >
               <div className="flex items-center justify-between">
@@ -99,7 +99,7 @@ export function AnimatedStageHeaders({
                       className="transition-colors flex-shrink-0 h-3 w-3"
                     />
                   )}
-                  <h3 className="font-semibold text-sm truncate">{stage}</h3>
+                  <h3 className="font-semibold text-sm truncate text-foreground">{stage}</h3>
                 </div>
                 <div className="flex items-center gap-2 flex-shrink-0">
                   <span className="text-xs font-medium whitespace-nowrap">
@@ -130,18 +130,18 @@ export function AnimatedStageHeaders({
                   isCollapsing && 'collapsing'
                 )}
               >
-                <div className="flex items-center justify-between">
-                  <h3 className="font-semibold text-sm text-muted-foreground">Details</h3>
-                  <Button
-                    size="sm"
-                    variant="ghost"
-                    onClick={() => onAddDetail?.()}
-                    className="h-7 px-2 text-sm font-semibold text-muted-foreground hover:text-foreground"
-                  >
-                    <Plus className="w-3.5 h-3.5 mr-1" />
-                    Add
-                  </Button>
-                </div>
+                  <div className="group/details flex items-center justify-between">
+                    <h3 className="font-semibold text-sm text-muted-foreground">Details</h3>
+                    <Button
+                      size="sm"
+                      variant="ghost"
+                      onClick={() => onAddDetail?.()}
+                      className="h-7 px-2 text-sm font-semibold text-muted-foreground hover:text-foreground opacity-0 group-hover/details:opacity-100 transition-opacity"
+                    >
+                      <Plus className="w-3.5 h-3.5 mr-1" />
+                      Add
+                    </Button>
+                  </div>
               </div>
             )}
           </Fragment>

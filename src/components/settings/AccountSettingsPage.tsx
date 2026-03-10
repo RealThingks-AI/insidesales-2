@@ -265,6 +265,7 @@ const AccountSettingsPage = () => {
             notificationPrefs={notificationPrefs}
             setNotificationPrefs={setNotificationPrefs}
             userId={user?.id || ''}
+            userTimezone={profile.timezone}
           />
         </TabsContent>
       </Tabs>

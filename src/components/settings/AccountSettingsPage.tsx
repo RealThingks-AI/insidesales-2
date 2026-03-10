@@ -151,7 +151,8 @@ const AccountSettingsPage = () => {
         notification_frequency: notifData?.notification_frequency ?? 'instant',
         leads_notifications: notifData?.leads_notifications ?? true,
         contacts_notifications: notifData?.contacts_notifications ?? true,
-        accounts_notifications: notifData?.accounts_notifications ?? true
+        accounts_notifications: notifData?.accounts_notifications ?? true,
+        daily_reminder_time: (notifData as any)?.daily_reminder_time ?? '09:00'
       };
       setNotificationPrefs(loadedNotifPrefs);
 

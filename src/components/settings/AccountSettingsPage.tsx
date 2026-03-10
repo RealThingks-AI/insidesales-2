@@ -74,7 +74,8 @@ const AccountSettingsPage = () => {
     notification_frequency: 'instant',
     leads_notifications: true,
     contacts_notifications: true,
-    accounts_notifications: true
+    accounts_notifications: true,
+    daily_reminder_time: '09:00'
   });
 
   const [displayPrefs, setDisplayPrefs] = useState<DisplayPrefs>({

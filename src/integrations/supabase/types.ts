@@ -730,10 +730,12 @@ export type Database = {
           accounts_notifications: boolean | null
           contacts_notifications: boolean | null
           created_at: string | null
+          daily_reminder_time: string | null
           deal_updates: boolean | null
           email_notifications: boolean | null
           id: string
           in_app_notifications: boolean | null
+          last_reminder_sent_at: string | null
           lead_assigned: boolean | null
           leads_notifications: boolean | null
           meeting_reminders: boolean | null
@@ -748,10 +750,12 @@ export type Database = {
           accounts_notifications?: boolean | null
           contacts_notifications?: boolean | null
           created_at?: string | null
+          daily_reminder_time?: string | null
           deal_updates?: boolean | null
           email_notifications?: boolean | null
           id?: string
           in_app_notifications?: boolean | null
+          last_reminder_sent_at?: string | null
           lead_assigned?: boolean | null
           leads_notifications?: boolean | null
           meeting_reminders?: boolean | null
@@ -766,10 +770,12 @@ export type Database = {
           accounts_notifications?: boolean | null
           contacts_notifications?: boolean | null
           created_at?: string | null
+          daily_reminder_time?: string | null
           deal_updates?: boolean | null
           email_notifications?: boolean | null
           id?: string
           in_app_notifications?: boolean | null
+          last_reminder_sent_at?: string | null
           lead_assigned?: boolean | null
           leads_notifications?: boolean | null
           meeting_reminders?: boolean | null

@@ -31,6 +31,7 @@ interface NotificationPrefs {
   leads_notifications: boolean;
   contacts_notifications: boolean;
   accounts_notifications: boolean;
+  daily_reminder_time: string;
 }
 
 interface DisplayPrefs {
